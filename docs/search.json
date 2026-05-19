@@ -1,0 +1,331 @@
+[
+  {
+    "objectID": "statistical-power.html",
+    "href": "statistical-power.html",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(and_vertebrates)"
+  },
+  {
+    "objectID": "statistical-power.html#setup",
+    "href": "statistical-power.html#setup",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(and_vertebrates)"
+  },
+  {
+    "objectID": "statistical-power.html#background",
+    "href": "statistical-power.html#background",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "Background",
+    "text": "Background\nFilter Cutthroat trout data and run a single 5-sample t-test as a baseline.\n\ntrout &lt;- and_vertebrates %&gt;%\n  filter(species == \"Cutthroat trout\") %&gt;%\n  drop_na(weight_g)\n\ntrout_5 &lt;- trout %&gt;%\n  group_by(section) %&gt;%\n  slice_sample(n = 5) %&gt;%\n  ungroup() %&gt;%\n  t_test(weight_g ~ section, var.equal = FALSE, detailed = FALSE)\n\ntrout_5\n\n# A tibble: 1 × 8\n  .y.      group1 group2    n1    n2 statistic    df     p\n* &lt;chr&gt;    &lt;chr&gt;  &lt;chr&gt;  &lt;int&gt; &lt;int&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1 weight_g CC     OG         5     5     0.921  7.42 0.386"
+  },
+  {
+    "objectID": "statistical-power.html#sampling-function",
+    "href": "statistical-power.html#sampling-function",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "1 & 2. Sampling function",
+    "text": "1 & 2. Sampling function\nA function that samples n fish per section and runs a Welch t-test.\n\ntrout_subber &lt;- function(n) {\n  trout %&gt;%\n    group_by(section) %&gt;%\n    slice_sample(n = n) %&gt;%\n    ungroup() %&gt;%\n    t_test(weight_g ~ section, var.equal = FALSE, detailed = FALSE)\n}"
+  },
+  {
+    "objectID": "statistical-power.html#simulate-across-sample-sizes",
+    "href": "statistical-power.html#simulate-across-sample-sizes",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "3. Simulate across sample sizes",
+    "text": "3. Simulate across sample sizes\nRun 100 iterations each for n = 5, 10, 1000, and 5000.\n\nsample_sizes &lt;- rep(c(5, 10, 1000, 5000), each = 100)\ntrout_results &lt;- map_dfr(sample_sizes, trout_subber)"
+  },
+  {
+    "objectID": "statistical-power.html#p-value-distributions",
+    "href": "statistical-power.html#p-value-distributions",
+    "title": "Statistical Power: P-value Simulation Across Sample Sizes",
+    "section": "4. P-value distributions",
+    "text": "4. P-value distributions\n\ntrout_results %&gt;%\n  ggplot(aes(x = p)) +\n  geom_histogram(bins = 30, fill = \"blue\", color = \"black\") +\n  facet_wrap(~ n1, labeller = label_both) +\n  geom_vline(xintercept = 0.05, color = \"red\", linetype = \"dashed\", linewidth = 1) +\n  labs(\n    x = \"P-value\",\n    y = \"Count\",\n    title = \"Distribution of P-values Across Different Sample Sizes\"\n  ) +\n  theme_minimal()"
+  },
+  {
+    "objectID": "linear-regression.html",
+    "href": "linear-regression.html",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\nlibrary(lubridate)\n\ndata(\"ntl_airtemp\")\ndata(\"ntl_icecover\")"
+  },
+  {
+    "objectID": "linear-regression.html#setup",
+    "href": "linear-regression.html#setup",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\nlibrary(lubridate)\n\ndata(\"ntl_airtemp\")\ndata(\"ntl_icecover\")"
+  },
+  {
+    "objectID": "linear-regression.html#data-preparation",
+    "href": "linear-regression.html#data-preparation",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "Data Preparation",
+    "text": "Data Preparation\nCalculate mean ice duration by water year and mean winter air temperature (Nov–Apr) by water year.\n\navg_icecover &lt;- ntl_icecover %&gt;%\n  group_by(wyear = year + 1) %&gt;%\n  summarize(mean_duration = mean(ice_duration, na.rm = TRUE))\n\nntl_airtemp_wyear &lt;- ntl_airtemp %&gt;%\n  mutate(wyear = if_else(month(sampledate) &lt; 10, year, year + 1))\n\nntl_winter_airtemp &lt;- ntl_airtemp_wyear %&gt;%\n  filter(lubridate::month(sampledate) %in% c(11, 12, 1:4)) %&gt;%\n  group_by(wyear) %&gt;%\n  summarize(mean_air_temp = mean(ave_air_temp_adjusted))"
+  },
+  {
+    "objectID": "linear-regression.html#join-datasets",
+    "href": "linear-regression.html#join-datasets",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "1. Join datasets",
+    "text": "1. Join datasets\n\nicecover_temp &lt;- avg_icecover %&gt;%\n  inner_join(ntl_winter_airtemp, by = \"wyear\")"
+  },
+  {
+    "objectID": "linear-regression.html#exploratory-plot",
+    "href": "linear-regression.html#exploratory-plot",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "2. Exploratory plot",
+    "text": "2. Exploratory plot\n\nggplot(data = icecover_temp, aes(x = mean_air_temp, y = mean_duration)) +\n  geom_point() +\n  labs(\n    x = \"Mean Winter Air Temperature (°C)\",\n    y = \"Mean Ice Duration (days)\",\n    title = \"Relationship between Winter Air Temperature and Ice Duration\"\n  ) +\n  theme_bw()"
+  },
+  {
+    "objectID": "linear-regression.html#correlation-test",
+    "href": "linear-regression.html#correlation-test",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "3. Correlation test",
+    "text": "3. Correlation test\n\nshapiro.test(icecover_temp$mean_air_temp)\n\n\n    Shapiro-Wilk normality test\n\ndata:  icecover_temp$mean_air_temp\nW = 0.98939, p-value = 0.3073\n\nshapiro.test(icecover_temp$mean_duration)\n\n\n    Shapiro-Wilk normality test\n\ndata:  icecover_temp$mean_duration\nW = 0.97623, p-value = 0.009812\n\ncor_test(icecover_temp,\n         vars = c(mean_air_temp, mean_duration),\n         alternative = \"two.sided\",\n         method = \"pearson\")\n\n# A tibble: 1 × 8\n  var1          var2            cor statistic       p conf.low conf.high method \n  &lt;chr&gt;         &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt; &lt;chr&gt;  \n1 mean_air_temp mean_duration  -0.8     -16.1 1.4e-34   -0.848    -0.730 Pearson"
+  },
+  {
+    "objectID": "linear-regression.html#simple-linear-regression",
+    "href": "linear-regression.html#simple-linear-regression",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "4. Simple linear regression",
+    "text": "4. Simple linear regression\n\nice_temp_model &lt;- lm(mean_duration ~ mean_air_temp, data = icecover_temp)\nsummary(ice_temp_model)\n\n\nCall:\nlm(formula = mean_duration ~ mean_air_temp, data = icecover_temp)\n\nResiduals:\n    Min      1Q  Median      3Q     Max \n-35.749  -5.303  -0.122   6.214  35.242 \n\nCoefficients:\n              Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)     85.186      1.363   62.50   &lt;2e-16 ***\nmean_air_temp   -8.903      0.552  -16.13   &lt;2e-16 ***\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 11.43 on 150 degrees of freedom\nMultiple R-squared:  0.6343,    Adjusted R-squared:  0.6319 \nF-statistic: 260.2 on 1 and 150 DF,  p-value: &lt; 2.2e-16\n\nnew_temps &lt;- tibble(mean_air_temp = c(-2, 0, 2))\npredict(ice_temp_model, newdata = new_temps)\n\n        1         2         3 \n102.99111  85.18557  67.38003"
+  },
+  {
+    "objectID": "linear-regression.html#regression-plot",
+    "href": "linear-regression.html#regression-plot",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "5. Regression plot",
+    "text": "5. Regression plot\n\nggplot(data = icecover_temp, aes(x = mean_air_temp, y = mean_duration)) +\n  geom_point() +\n  geom_smooth(method = \"lm\", se = FALSE) +\n  labs(\n    x = \"Mean Winter Air Temperature (°C)\",\n    y = \"Mean Ice Duration (days)\",\n    title = \"Relationship between Winter Air Temperature and Ice Duration\"\n  ) +\n  theme_bw()\n\n`geom_smooth()` using formula = 'y ~ x'"
+  },
+  {
+    "objectID": "linear-regression.html#model-coefficients",
+    "href": "linear-regression.html#model-coefficients",
+    "title": "Linear Regression: Lake Ice Duration and Winter Temperature",
+    "section": "6. Model coefficients",
+    "text": "6. Model coefficients\n\nsummary(ice_temp_model)\n\n\nCall:\nlm(formula = mean_duration ~ mean_air_temp, data = icecover_temp)\n\nResiduals:\n    Min      1Q  Median      3Q     Max \n-35.749  -5.303  -0.122   6.214  35.242 \n\nCoefficients:\n              Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)     85.186      1.363   62.50   &lt;2e-16 ***\nmean_air_temp   -8.903      0.552  -16.13   &lt;2e-16 ***\n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 11.43 on 150 degrees of freedom\nMultiple R-squared:  0.6343,    Adjusted R-squared:  0.6319 \nF-statistic: 260.2 on 1 and 150 DF,  p-value: &lt; 2.2e-16\n\ncoefficients(ice_temp_model)\n\n  (Intercept) mean_air_temp \n     85.18557      -8.90277 \n\nintercept &lt;- coef(ice_temp_model)[1]\nslope &lt;- coef(ice_temp_model)[2]\n\nsigma(ice_temp_model)\n\n[1] 11.42689"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html",
+    "href": "hypothesis-testing-ttest.html",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(\"and_vertebrates\")"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html#setup",
+    "href": "hypothesis-testing-ttest.html#setup",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(\"and_vertebrates\")"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html#data-preparation",
+    "href": "hypothesis-testing-ttest.html#data-preparation",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "Data Preparation",
+    "text": "Data Preparation\nFilter for Coastal giant salamander and remove missing length measurements.\n\nsalamander_data &lt;- and_vertebrates %&gt;%\n  filter(species == \"Coastal giant salamander\") %&gt;%\n  select(section, length_1_mm) %&gt;%\n  filter(!is.na(length_1_mm), !is.na(section)) %&gt;%\n  filter(length_1_mm &gt; 0)\n\nglimpse(salamander_data)\n\nRows: 11,749\nColumns: 2\n$ section     &lt;chr&gt; \"CC\", \"CC\", \"CC\", \"CC\", \"CC\", \"CC\", \"CC\", \"CC\", \"CC\", \"CC\"…\n$ length_1_mm &lt;dbl&gt; 72, 85, 61, 42, 61, 81, 55, 70, 69, 25, 46, 88, 100, 85, 5…\n\nsalamander_summary &lt;- salamander_data %&gt;%\n  group_by(section) %&gt;%\n  summarise(\n    n = n(),\n    mean_length = mean(length_1_mm),\n    sd_length = sd(length_1_mm),\n    median_length = median(length_1_mm),\n    .groups = 'drop'\n  )\n\nprint(salamander_summary)\n\n# A tibble: 2 × 5\n  section     n mean_length sd_length median_length\n  &lt;chr&gt;   &lt;int&gt;       &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;\n1 CC       5397        60.5      20.8            58\n2 OG       6352        54.0      20.5            52"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html#assumption-checks",
+    "href": "hypothesis-testing-ttest.html#assumption-checks",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "Assumption Checks",
+    "text": "Assumption Checks\n\nA. Normality\nShapiro-Wilk test: if p &gt; 0.05 the data are approximately normally distributed. Q-Q plots provide a visual check.\n\nsample_sizes &lt;- salamander_data %&gt;% count(section)\nprint(sample_sizes)\n\n# A tibble: 2 × 2\n  section     n\n  &lt;chr&gt;   &lt;int&gt;\n1 CC       5397\n2 OG       6352\n\ntryCatch({\n  normality_tests &lt;- salamander_data %&gt;%\n    group_by(section) %&gt;%\n    shapiro_test(length_1_mm)\n  print(normality_tests)\n}, error = function(e) {\n  for (forest_type in unique(salamander_data$section)) {\n    group_data &lt;- salamander_data %&gt;% filter(section == forest_type)\n    if (nrow(group_data) &gt;= 3 & nrow(group_data) &lt;= 5000) {\n      test_result &lt;- shapiro.test(group_data$length_1_mm)\n      cat(sprintf(\"Forest type: %s, n = %d, W = %.4f, p-value = %.4f\\n\",\n                  forest_type, nrow(group_data), test_result$statistic, test_result$p.value))\n    }\n  }\n})\n\nqq_plot &lt;- salamander_data %&gt;%\n  ggplot(aes(sample = length_1_mm)) +\n  geom_qq() +\n  geom_qq_line() +\n  facet_wrap(~section) +\n  labs(title = \"Q-Q Plots for Normality Check\",\n       subtitle = \"Coastal Giant Salamander Length by Forest Type\") +\n  theme_minimal()\n\nprint(qq_plot)\n\n\n\n\n\n\n\n\n\n\nB. Equal Variances\nLevene’s test for homoscedasticity.\n\nvariance_test &lt;- salamander_data %&gt;%\n  levene_test(length_1_mm ~ section)\n\nWarning in leveneTest.default(y = y, group = group, ...): group coerced to\nfactor.\n\nprint(variance_test)\n\n# A tibble: 1 × 4\n    df1   df2 statistic        p\n  &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;    &lt;dbl&gt;\n1     1 11747      14.3 0.000157\n\nboxplot_check &lt;- salamander_data %&gt;%\n  ggplot(aes(x = section, y = length_1_mm)) +\n  geom_boxplot(alpha = 0.7) +\n  labs(title = \"Boxplot: Salamander Length by Forest Type\",\n       subtitle = \"Visual check for equal variances and outliers\",\n       x = \"Forest Type (Section)\",\n       y = \"Snout-vent Length (mm)\") +\n  theme_minimal()\n\nprint(boxplot_check)"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html#t-test-and-effect-size",
+    "href": "hypothesis-testing-ttest.html#t-test-and-effect-size",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "T-Test and Effect Size",
+    "text": "T-Test and Effect Size\n\nttest_result &lt;- salamander_data %&gt;%\n  t_test(length_1_mm ~ section, var.equal = TRUE)\n\nprint(ttest_result)\n\n# A tibble: 1 × 8\n  .y.         group1 group2    n1    n2 statistic    df        p\n* &lt;chr&gt;       &lt;chr&gt;  &lt;chr&gt;  &lt;int&gt; &lt;int&gt;     &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;\n1 length_1_mm CC     OG      5397  6352      17.0 11747 8.75e-64\n\neffect_size &lt;- salamander_data %&gt;%\n  cohens_d(length_1_mm ~ section)\n\nprint(effect_size)\n\n# A tibble: 1 × 7\n  .y.         group1 group2 effsize    n1    n2 magnitude\n* &lt;chr&gt;       &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt; &lt;int&gt; &lt;int&gt; &lt;ord&gt;    \n1 length_1_mm CC     OG       0.314  5397  6352 small"
+  },
+  {
+    "objectID": "hypothesis-testing-ttest.html#final-plot",
+    "href": "hypothesis-testing-ttest.html#final-plot",
+    "title": "Hypothesis Testing: Independent Samples T-Test",
+    "section": "Final Plot",
+    "text": "Final Plot\n\nclean_boxplot &lt;- salamander_data %&gt;%\n  ggplot(aes(x = section, y = length_1_mm, fill = section)) +\n  geom_boxplot(alpha = 0.8, outlier.size = 1.5, outlier.alpha = 0.6) +\n  stat_summary(fun = mean, geom = \"point\", shape = 23, size = 4,\n               fill = \"white\", color = \"black\", stroke = 1) +\n  labs(\n    title = \"Snout-vent Length of Coastal Giant Salamanders\",\n    subtitle = \"Comparison between forest types\",\n    x = \"Forest Type\",\n    y = \"Snout-vent Length (mm)\"\n  ) +\n  theme_classic() +\n  theme(\n    legend.position = \"none\",\n    plot.title = element_text(size = 14, face = \"bold\"),\n    plot.subtitle = element_text(size = 12),\n    axis.title = element_text(size = 11),\n    axis.text = element_text(size = 10)\n  ) +\n  scale_fill_brewer(palette = \"Set2\")\n\nprint(clean_boxplot)"
+  },
+  {
+    "objectID": "data-wrangling.html",
+    "href": "data-wrangling.html",
+    "title": "Data Wrangling with dplyr",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\ndata(\"penguins\")"
+  },
+  {
+    "objectID": "data-wrangling.html#setup",
+    "href": "data-wrangling.html#setup",
+    "title": "Data Wrangling with dplyr",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\ndata(\"penguins\")"
+  },
+  {
+    "objectID": "data-wrangling.html#question-1",
+    "href": "data-wrangling.html#question-1",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 1",
+    "text": "Question 1\nFixing common errors: c() for multiple columns, correcting spelling, specifying the data frame name.\n\npenguins[1:5, c(\"species\", \"island\")]\n\n# A tibble: 5 × 2\n  species island   \n  &lt;fct&gt;   &lt;fct&gt;    \n1 Adelie  Torgersen\n2 Adelie  Torgersen\n3 Adelie  Torgersen\n4 Adelie  Torgersen\n5 Adelie  Torgersen"
+  },
+  {
+    "objectID": "data-wrangling.html#question-2",
+    "href": "data-wrangling.html#question-2",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 2",
+    "text": "Question 2\nThe species with the largest average flipper length is Gentoo at 217 mm, followed by Chinstrap at 196 mm, and smallest Adelie at 190 mm.\n\npenguins %&gt;%\n  group_by(species) %&gt;%\n  summarise(flipper_length_avg = mean(flipper_length_mm, na.rm = TRUE))\n\n# A tibble: 3 × 2\n  species   flipper_length_avg\n  &lt;fct&gt;                  &lt;dbl&gt;\n1 Adelie                  190.\n2 Chinstrap               196.\n3 Gentoo                  217."
+  },
+  {
+    "objectID": "data-wrangling.html#question-3",
+    "href": "data-wrangling.html#question-3",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 3",
+    "text": "Question 3\nAdelie penguins are on all three islands, whereas Chinstrap and Gentoo are each on one island.\n\npenguins %&gt;%\n  group_by(species, island) %&gt;%\n  summarise(n_observations = n())\n\n`summarise()` has grouped output by 'species'. You can override using the\n`.groups` argument.\n\n\n# A tibble: 5 × 3\n# Groups:   species [3]\n  species   island    n_observations\n  &lt;fct&gt;     &lt;fct&gt;              &lt;int&gt;\n1 Adelie    Biscoe                44\n2 Adelie    Dream                 56\n3 Adelie    Torgersen             52\n4 Chinstrap Dream                 68\n5 Gentoo    Biscoe               124"
+  },
+  {
+    "objectID": "data-wrangling.html#question-4",
+    "href": "data-wrangling.html#question-4",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 4",
+    "text": "Question 4\nReorder columns to put year first.\n\npenguins %&gt;%\n  select(year, everything())\n\n# A tibble: 344 × 8\n    year species island    bill_length_mm bill_depth_mm flipper_length_mm\n   &lt;int&gt; &lt;fct&gt;   &lt;fct&gt;              &lt;dbl&gt;         &lt;dbl&gt;             &lt;int&gt;\n 1  2007 Adelie  Torgersen           39.1          18.7               181\n 2  2007 Adelie  Torgersen           39.5          17.4               186\n 3  2007 Adelie  Torgersen           40.3          18                 195\n 4  2007 Adelie  Torgersen           NA            NA                  NA\n 5  2007 Adelie  Torgersen           36.7          19.3               193\n 6  2007 Adelie  Torgersen           39.3          20.6               190\n 7  2007 Adelie  Torgersen           38.9          17.8               181\n 8  2007 Adelie  Torgersen           39.2          19.6               195\n 9  2007 Adelie  Torgersen           34.1          18.1               193\n10  2007 Adelie  Torgersen           42            20.2               190\n# ℹ 334 more rows\n# ℹ 2 more variables: body_mass_g &lt;int&gt;, sex &lt;fct&gt;"
+  },
+  {
+    "objectID": "data-wrangling.html#question-5",
+    "href": "data-wrangling.html#question-5",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 5",
+    "text": "Question 5\nCreate a size group column based on whether each penguin is above or below the mean body mass.\n\npenguins_fixed &lt;- penguins %&gt;%\n  mutate(size_group = if_else(\n    body_mass_g &gt; mean(penguins$body_mass_g, na.rm = TRUE),\n    paste0(species, \" large\"),\n    paste0(species, \" small\")\n  ))\npenguins_fixed %&gt;% select(size_group)\n\n# A tibble: 344 × 1\n   size_group  \n   &lt;chr&gt;       \n 1 Adelie small\n 2 Adelie small\n 3 Adelie small\n 4 &lt;NA&gt;        \n 5 Adelie small\n 6 Adelie small\n 7 Adelie small\n 8 Adelie large\n 9 Adelie small\n10 Adelie large\n# ℹ 334 more rows"
+  },
+  {
+    "objectID": "data-wrangling.html#question-6",
+    "href": "data-wrangling.html#question-6",
+    "title": "Data Wrangling with dplyr",
+    "section": "Question 6",
+    "text": "Question 6\nHypothesis: larger penguins cluster by island, suggesting one island has better food resources.\n\nggplot(penguins) +\n  geom_point(mapping = aes(x = body_mass_g, y = flipper_length_mm, color = island))\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\n\n\n\n\n\n\n\nBiscoe Island has both the largest overall body masses. Checking the range:\n\npenguins_clean &lt;- penguins %&gt;% filter(!is.na(body_mass_g))\n\nisland_stats &lt;- penguins_clean %&gt;%\n  group_by(island) %&gt;%\n  summarise(\n    n_penguins = n(),\n    min_body_mass = min(body_mass_g),\n    max_body_mass = max(body_mass_g)\n  )\n\nisland_stats\n\n# A tibble: 3 × 4\n  island    n_penguins min_body_mass max_body_mass\n  &lt;fct&gt;          &lt;int&gt;         &lt;int&gt;         &lt;int&gt;\n1 Biscoe           167          2850          6300\n2 Dream            124          2700          4800\n3 Torgersen         51          2900          4700"
+  },
+  {
+    "objectID": "data-visualization.html",
+    "href": "data-visualization.html",
+    "title": "Principles of Data Visualization",
+    "section": "",
+    "text": "library(ggplot2)\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\nlibrary(dplyr)\n\n\nAttaching package: 'dplyr'\n\n\nThe following objects are masked from 'package:stats':\n\n    filter, lag\n\n\nThe following objects are masked from 'package:base':\n\n    intersect, setdiff, setequal, union\n\ndata(penguins)\npenguins_clean &lt;- penguins %&gt;%\n  filter(!is.na(bill_length_mm), !is.na(bill_depth_mm),\n         !is.na(flipper_length_mm), !is.na(body_mass_g))"
+  },
+  {
+    "objectID": "data-visualization.html#setup",
+    "href": "data-visualization.html#setup",
+    "title": "Principles of Data Visualization",
+    "section": "",
+    "text": "library(ggplot2)\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\nlibrary(palmerpenguins)\n\n\nAttaching package: 'palmerpenguins'\n\n\nThe following objects are masked from 'package:datasets':\n\n    penguins, penguins_raw\n\nlibrary(dplyr)\n\n\nAttaching package: 'dplyr'\n\n\nThe following objects are masked from 'package:stats':\n\n    filter, lag\n\n\nThe following objects are masked from 'package:base':\n\n    intersect, setdiff, setequal, union\n\ndata(penguins)\npenguins_clean &lt;- penguins %&gt;%\n  filter(!is.na(bill_length_mm), !is.na(bill_depth_mm),\n         !is.na(flipper_length_mm), !is.na(body_mass_g))"
+  },
+  {
+    "objectID": "data-visualization.html#the-good-plot",
+    "href": "data-visualization.html#the-good-plot",
+    "title": "Principles of Data Visualization",
+    "section": "The Good Plot",
+    "text": "The Good Plot\nA well-designed plot: clear title and axis labels, colorblind-friendly palette, appropriate point size, regression lines per species, minimal theme.\n\ngood_plot &lt;- penguins_clean %&gt;%\n  ggplot(aes(x = flipper_length_mm, y = body_mass_g, color = species)) +\n  geom_point(size = 2.5, alpha = 0.8) +\n  geom_smooth(method = \"lm\", se = FALSE, linewidth = 1) +\n  scale_color_manual(\n    values = c(\"Adelie\" = \"#FF6B35\", \"Chinstrap\" = \"#004E89\", \"Gentoo\" = \"#009639\"),\n    name = \"Species\"\n  ) +\n  labs(\n    title = \"Relationship Between Flipper Length and Body Mass in Palmer Penguins\",\n    subtitle = \"Larger penguins tend to have longer flippers across all species\",\n    x = \"Flipper Length (mm)\",\n    y = \"Body Mass (g)\",\n    caption = \"Data source: Palmer Penguins dataset\"\n  ) +\n  theme_minimal() +\n  theme(\n    plot.title = element_text(size = 14, face = \"bold\", hjust = 0),\n    plot.subtitle = element_text(size = 11, color = \"gray30\", hjust = 0),\n    axis.title = element_text(size = 11, face = \"bold\"),\n    axis.text = element_text(size = 10),\n    legend.title = element_text(size = 11, face = \"bold\"),\n    legend.text = element_text(size = 10),\n    panel.grid.minor = element_blank(),\n    plot.caption = element_text(size = 9, color = \"gray50\")\n  )\n\nprint(good_plot)\n\n`geom_smooth()` using formula = 'y ~ x'"
+  },
+  {
+    "objectID": "data-visualization.html#the-bad-plot",
+    "href": "data-visualization.html#the-bad-plot",
+    "title": "Principles of Data Visualization",
+    "section": "The Bad Plot",
+    "text": "The Bad Plot\nA deliberately poor plot demonstrating common mistakes: misleading title, clashing colors (not colorblind-friendly), angled axis labels, arbitrary axis limits that cut data, garish background colors.\n\nbad_plot &lt;- penguins_clean %&gt;%\n  ggplot(aes(x = bill_length_mm, y = bill_depth_mm, color = sex)) +\n  geom_point(size = 8, alpha = 1) +\n  scale_color_manual(\n    values = c(\"female\" = \"red\", \"male\" = \"green\"),\n    name = \"Gender of the Penguin Bird\"\n  ) +\n  labs(\n    title = \"The best graph in the world\",\n    x = \"The length of a panguin bill in millimeters unit\",\n    y = \"mm bill depth of penguin\"\n  ) +\n  xlim(30, 65) +\n  ylim(12, 25) +\n  theme(\n    plot.title = element_text(size = 20, face = \"bold\", color = \"purple\"),\n    axis.title.x = element_text(size = 14, angle = 45, color = \"blue\"),\n    axis.title.y = element_text(size = 14, angle = 45, color = \"orange\"),\n    axis.text.x = element_text(angle = 90, size = 6),\n    axis.text.y = element_text(angle = 45, size = 6),\n    legend.position = \"top\",\n    legend.title = element_text(size = 8),\n    panel.background = element_rect(fill = \"yellow\"),\n    plot.background = element_rect(fill = \"lightblue\"),\n    panel.grid.major = element_line(color = \"darkgreen\", size = 2),\n    panel.grid.minor = element_line(color = \"pink\", size = 1)\n  )\n\nWarning: The `size` argument of `element_line()` is deprecated as of ggplot2 3.4.0.\nℹ Please use the `linewidth` argument instead.\n\nprint(bad_plot)"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html",
+    "href": "hypothesis-testing-anova.html",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(\"and_vertebrates\")"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html#setup",
+    "href": "hypothesis-testing-anova.html#setup",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(lterdatasampler)\nlibrary(rstatix)\n\n\nAttaching package: 'rstatix'\n\nThe following object is masked from 'package:stats':\n\n    filter\n\ndata(\"and_vertebrates\")"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html#data-preparation",
+    "href": "hypothesis-testing-anova.html#data-preparation",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "Data Preparation",
+    "text": "Data Preparation\nFilter for Coastal giant salamander across three channel unit types (C = cascade, P = pool, SC = side channel).\n\nsalamander_data &lt;- and_vertebrates %&gt;%\n  filter(species == \"Coastal giant salamander\",\n         unittype %in% c(\"C\", \"P\", \"SC\")) %&gt;%\n  select(unittype, length_1_mm) %&gt;%\n  filter(!is.na(length_1_mm), !is.na(unittype)) %&gt;%\n  mutate(unittype = as.factor(unittype))"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html#assumption-checks",
+    "href": "hypothesis-testing-anova.html#assumption-checks",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "Assumption Checks",
+    "text": "Assumption Checks\n\nsalamander_data %&gt;%\n  group_by(unittype) %&gt;%\n  get_summary_stats(length_1_mm, type = \"mean_sd\")\n\n# A tibble: 3 × 5\n  unittype variable        n  mean    sd\n  &lt;fct&gt;    &lt;fct&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1 C        length_1_mm  7688  58.3  20.8\n2 P        length_1_mm  1943  57.3  22.8\n3 SC       length_1_mm  1994  51.8  18.0\n\nnormality_check &lt;- salamander_data %&gt;%\n  group_by(unittype) %&gt;%\n  summarise(\n    n = n(),\n    shapiro_p = if (n &gt;= 3 & n &lt;= 5000) shapiro.test(length_1_mm)$p.value else NA,\n    .groups = 'drop'\n  )\n\nnormality_check\n\n# A tibble: 3 × 3\n  unittype     n shapiro_p\n  &lt;fct&gt;    &lt;int&gt;     &lt;dbl&gt;\n1 C         7688 NA       \n2 P         1943  2.40e-33\n3 SC        1994  2.15e-29\n\nsalamander_data %&gt;%\n  levene_test(length_1_mm ~ unittype)\n\n# A tibble: 1 × 4\n    df1   df2 statistic        p\n  &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;    &lt;dbl&gt;\n1     2 11622      20.9 8.52e-10"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html#anova-and-post-hoc-test",
+    "href": "hypothesis-testing-anova.html#anova-and-post-hoc-test",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "ANOVA and Post-Hoc Test",
+    "text": "ANOVA and Post-Hoc Test\n\nanova_result &lt;- salamander_data %&gt;%\n  anova_test(length_1_mm ~ unittype)\n\nanova_result\n\nANOVA Table (type II tests)\n\n    Effect DFn   DFd      F        p p&lt;.05   ges\n1 unittype   2 11622 79.073 7.77e-35     * 0.013\n\nif (anova_result$p &lt; 0.05) {\n  posthoc_result &lt;- salamander_data %&gt;%\n    tukey_hsd(length_1_mm ~ unittype)\n  posthoc_result\n}\n\n# A tibble: 3 × 9\n  term   group1 group2 null.value estimate conf.low conf.high p.adj p.adj.signif\n* &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;       &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;       \n1 unitt… C      P               0    -1.04    -2.27     0.198  0.12 ns          \n2 unitt… C      SC              0    -6.55    -7.77    -5.32   0    ****        \n3 unitt… P      SC              0    -5.51    -7.06    -3.96   0    ****        \n\neta_squared &lt;- salamander_data %&gt;%\n  anova_test(length_1_mm ~ unittype)\n\neta_squared$ges\n\n[1] 0.013"
+  },
+  {
+    "objectID": "hypothesis-testing-anova.html#visualization",
+    "href": "hypothesis-testing-anova.html#visualization",
+    "title": "Hypothesis Testing: One-Way ANOVA",
+    "section": "Visualization",
+    "text": "Visualization\n\nsalamander_data %&gt;%\n  ggplot(aes(x = unittype, y = length_1_mm, fill = unittype)) +\n  geom_boxplot(alpha = 0.7) +\n  stat_summary(fun = mean, geom = \"point\", shape = 23, size = 3,\n               fill = \"white\", color = \"black\") +\n  labs(\n    title = \"Salamander Length by Channel Type\",\n    x = \"Channel Type\",\n    y = \"Snout-vent Length (mm)\"\n  ) +\n  theme_minimal() +\n  theme(legend.position = \"none\")"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Introduction to R — Fall 2025",
+    "section": "",
+    "text": "Course assignments from ESS Introduction to R, Fall 2025 at Colorado State University. Topics cover data wrangling, visualization, and statistical inference in R using tidyverse, ggplot2, and related packages.\n\n\n\nTopic\nDescription\n\n\n\n\nData Wrangling\nPalmer penguins: dplyr select, filter, group_by, summarise, mutate\n\n\nData Visualization\nPrinciples of good vs. bad ggplot design\n\n\nT-Test\nSalamander length: independent samples t-test\n\n\nANOVA\nSalamander length by channel type: one-way ANOVA & Tukey HSD\n\n\nLinear Regression\nLake ice duration vs. winter temperature: correlation and simple regression\n\n\nMultiple Regression\nUSGS gage streamflow: multiple linear regression\n\n\nStatistical Power\nCutthroat trout: p-value simulation across sample sizes"
+  },
+  {
+    "objectID": "multiple-regression.html",
+    "href": "multiple-regression.html",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\ndata_files &lt;- list.files('usgs_gages/usgs_gages', full.names = TRUE, pattern = \"*.csv\")\nusgs_data &lt;- map_dfr(data_files, read_csv)\n\nRows: 9 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 5 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 2 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 27 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 22 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 19 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 10 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 42 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 13 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+  },
+  {
+    "objectID": "multiple-regression.html#setup",
+    "href": "multiple-regression.html#setup",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "",
+    "text": "library(tidyverse)\n\nWarning: package 'tidyverse' was built under R version 4.5.3\n\n\nWarning: package 'ggplot2' was built under R version 4.5.2\n\n\nWarning: package 'stringr' was built under R version 4.5.3\n\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.1.4     ✔ readr     2.1.5\n✔ forcats   1.0.0     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.0\n✔ lubridate 1.9.4     ✔ tidyr     1.3.1\n✔ purrr     1.1.0     \n── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n✖ dplyr::filter() masks stats::filter()\n✖ dplyr::lag()    masks stats::lag()\nℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\ndata_files &lt;- list.files('usgs_gages/usgs_gages', full.names = TRUE, pattern = \"*.csv\")\nusgs_data &lt;- map_dfr(data_files, read_csv)\n\nRows: 9 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 5 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 2 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 27 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 22 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 19 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 10 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 42 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 1 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\nRows: 13 Columns: 17\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): site_name, state\ndbl (15): annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+  },
+  {
+    "objectID": "multiple-regression.html#exploratory-predictors-vs.-annual-streamflow",
+    "href": "multiple-regression.html#exploratory-predictors-vs.-annual-streamflow",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "1. Exploratory: Predictors vs. Annual Streamflow",
+    "text": "1. Exploratory: Predictors vs. Annual Streamflow\n\nusgs_long &lt;- usgs_data %&gt;%\n  select(annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,\n         median_ws_elevation, mean_annual_precip, mean_winter_temp,\n         mean_aridity_index, soil_sand_content, mean_soil_organic_matter,\n         mean_soil_permeability, percent_urban, percent_forested,\n         percent_wetland, percent_s_facing) %&gt;%\n  pivot_longer(cols = -annual_streamflow_mm)\n\nggplot(data = usgs_long, aes(x = value, y = annual_streamflow_mm)) +\n  geom_point(alpha = 0.5) +\n  geom_smooth(method = \"lm\", se = FALSE, color = \"blue\") +\n  facet_wrap(~name, scales = \"free_x\") +\n  labs(\n    x = \"Predictor Variable Value\",\n    y = \"Annual Streamflow (mm)\",\n    title = \"Relationship between Predictors and Annual Streamflow\"\n  ) +\n  theme_bw()\n\n`geom_smooth()` using formula = 'y ~ x'"
+  },
+  {
+    "objectID": "multiple-regression.html#multiple-linear-regression-model",
+    "href": "multiple-regression.html#multiple-linear-regression-model",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "2. Multiple Linear Regression Model",
+    "text": "2. Multiple Linear Regression Model\n\nstreamflow_model &lt;- lm(annual_streamflow_mm ~ mean_annual_precip +\n                                               ws_area_sqkm +\n                                               mean_baseflow +\n                                               percent_forested +\n                                               mean_aridity_index +\n                                               soil_sand_content,\n                       data = usgs_data)\n\nsummary(streamflow_model)\n\n\nCall:\nlm(formula = annual_streamflow_mm ~ mean_annual_precip + ws_area_sqkm + \n    mean_baseflow + percent_forested + mean_aridity_index + soil_sand_content, \n    data = usgs_data)\n\nResiduals:\n     Min       1Q   Median       3Q      Max \n-208.033  -40.807   -3.312   38.155  217.475 \n\nCoefficients:\n                     Estimate Std. Error t value Pr(&gt;|t|)    \n(Intercept)        -789.62214   45.88054 -17.210  &lt; 2e-16 ***\nmean_annual_precip    0.33214    0.05126   6.479 1.35e-09 ***\nws_area_sqkm         -0.02129    0.01973  -1.079   0.2823    \nmean_baseflow         0.65806    0.67459   0.975   0.3309    \npercent_forested      1.04189    0.46752   2.229   0.0274 *  \nmean_aridity_index  678.19901   37.12957  18.266  &lt; 2e-16 ***\nsoil_sand_content     1.70947    0.84656   2.019   0.0453 *  \n---\nSignif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1\n\nResidual standard error: 64.81 on 145 degrees of freedom\nMultiple R-squared:  0.9268,    Adjusted R-squared:  0.9237 \nF-statistic: 305.8 on 6 and 145 DF,  p-value: &lt; 2.2e-16"
+  },
+  {
+    "objectID": "multiple-regression.html#assumption-diagnostics",
+    "href": "multiple-regression.html#assumption-diagnostics",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "3. Assumption Diagnostics",
+    "text": "3. Assumption Diagnostics\n\nplot(streamflow_model, which = 1)\n\n\n\n\n\n\n\nplot(streamflow_model, which = 2)\n\n\n\n\n\n\n\nusgs_data %&gt;%\n  select(mean_annual_precip, ws_area_sqkm, mean_baseflow,\n         percent_forested, mean_aridity_index, soil_sand_content) %&gt;%\n  cor()\n\n                   mean_annual_precip ws_area_sqkm mean_baseflow\nmean_annual_precip          1.0000000  -0.14456845    0.31967944\nws_area_sqkm               -0.1445685   1.00000000   -0.10851393\nmean_baseflow               0.3196794  -0.10851393    1.00000000\npercent_forested            0.4783254  -0.07463473    0.08687909\nmean_aridity_index          0.7507868  -0.21825589    0.12325235\nsoil_sand_content           0.1711090  -0.06614843    0.39268880\n                   percent_forested mean_aridity_index soil_sand_content\nmean_annual_precip       0.47832536          0.7507868        0.17110905\nws_area_sqkm            -0.07463473         -0.2182559       -0.06614843\nmean_baseflow            0.08687909          0.1232524        0.39268880\npercent_forested         1.00000000          0.5304054        0.39667699\nmean_aridity_index       0.53040540          1.0000000        0.28768508\nsoil_sand_content        0.39667699          0.2876851        1.00000000"
+  },
+  {
+    "objectID": "multiple-regression.html#prediction",
+    "href": "multiple-regression.html#prediction",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "4. Prediction",
+    "text": "4. Prediction\n\nnew_streamflow_data &lt;- tibble(\n  mean_annual_precip = c(1972, 994),\n  ws_area_sqkm = c(1500, 2),\n  mean_baseflow = c(67, 20),\n  percent_forested = c(100, 30),\n  mean_aridity_index = c(1.1, 1.3),\n  soil_sand_content = c(40, 50)\n)\n\npredict(streamflow_model, newdata = new_streamflow_data)\n\n       1        2 \n796.0836 552.0278"
+  },
+  {
+    "objectID": "multiple-regression.html#model-improvements",
+    "href": "multiple-regression.html#model-improvements",
+    "title": "Multiple Linear Regression: USGS Gage Streamflow",
+    "section": "5. Model Improvements",
+    "text": "5. Model Improvements\n\nstreamflow_model_log &lt;- lm(log(annual_streamflow_mm) ~ mean_annual_precip +\n                                                        ws_area_sqkm +\n                                                        mean_baseflow,\n                           data = usgs_data)\n\nstreamflow_model_sqrt &lt;- lm(sqrt(annual_streamflow_mm) ~ mean_annual_precip +\n                                                          ws_area_sqkm,\n                            data = usgs_data)\n\nstreamflow_model &lt;- lm(annual_streamflow_mm ~ log(mean_annual_precip) +\n                                               log(ws_area_sqkm) +\n                                               mean_baseflow,\n                       data = usgs_data)\n\nstreamflow_model_reduced &lt;- lm(annual_streamflow_mm ~ mean_annual_precip +\n                                                       ws_area_sqkm,\n                               data = usgs_data)\n\nplot(streamflow_model, which = 4)\n\n\n\n\n\n\n\ncooksd &lt;- cooks.distance(streamflow_model)\nusgs_filtered &lt;- usgs_data %&gt;% filter(cooksd &lt; 0.5)\n\nstreamflow_model_filtered &lt;- lm(annual_streamflow_mm ~ mean_annual_precip +\n                                                        ws_area_sqkm,\n                                data = usgs_filtered)\n\nstreamflow_model_interact &lt;- lm(annual_streamflow_mm ~ mean_annual_precip *\n                                                        mean_aridity_index +\n                                                        ws_area_sqkm,\n                                data = usgs_data)\n\nplot(streamflow_model_log, which = 1)\n\n\n\n\n\n\n\nplot(streamflow_model_log, which = 2)"
+  }
+]

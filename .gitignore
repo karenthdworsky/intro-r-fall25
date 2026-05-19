@@ -2,5 +2,9 @@
 .RData
 .Rproj.user/
 *_cache/
-*_files/
+/*_files/
+!/docs/
 *.Rproj
+
+/.quarto/
+**/*.quarto_ipynb

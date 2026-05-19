@@ -1,0 +1,76 @@
+---
+title: "Statistical Power: P-value Simulation Across Sample Sizes"
+author: "Karen Dworsky"
+date: "2025-10-13"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(palmerpenguins)
+library(rstatix)
+
+data(and_vertebrates)
+```
+
+## Background
+
+Filter Cutthroat trout data and run a single 5-sample t-test as a baseline.
+
+```{r}
+trout <- and_vertebrates %>%
+  filter(species == "Cutthroat trout") %>%
+  drop_na(weight_g)
+
+trout_5 <- trout %>%
+  group_by(section) %>%
+  slice_sample(n = 5) %>%
+  ungroup() %>%
+  t_test(weight_g ~ section, var.equal = FALSE, detailed = FALSE)
+
+trout_5
+```
+
+## 1 & 2. Sampling function
+
+A function that samples `n` fish per section and runs a Welch t-test.
+
+```{r}
+trout_subber <- function(n) {
+  trout %>%
+    group_by(section) %>%
+    slice_sample(n = n) %>%
+    ungroup() %>%
+    t_test(weight_g ~ section, var.equal = FALSE, detailed = FALSE)
+}
+```
+
+## 3. Simulate across sample sizes
+
+Run 100 iterations each for n = 5, 10, 1000, and 5000.
+
+```{r}
+sample_sizes <- rep(c(5, 10, 1000, 5000), each = 100)
+trout_results <- map_dfr(sample_sizes, trout_subber)
+```
+
+## 4. P-value distributions
+
+```{r}
+trout_results %>%
+  ggplot(aes(x = p)) +
+  geom_histogram(bins = 30, fill = "blue", color = "black") +
+  facet_wrap(~ n1, labeller = label_both) +
+  geom_vline(xintercept = 0.05, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(
+    x = "P-value",
+    y = "Count",
+    title = "Distribution of P-values Across Different Sample Sizes"
+  ) +
+  theme_minimal()
+```

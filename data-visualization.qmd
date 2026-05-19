@@ -1,0 +1,92 @@
+---
+title: "Principles of Data Visualization"
+author: "Karen Dworsky"
+date: "2025-09-13"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(ggplot2)
+library(palmerpenguins)
+library(dplyr)
+
+data(penguins)
+penguins_clean <- penguins %>%
+  filter(!is.na(bill_length_mm), !is.na(bill_depth_mm),
+         !is.na(flipper_length_mm), !is.na(body_mass_g))
+```
+
+## The Good Plot
+
+A well-designed plot: clear title and axis labels, colorblind-friendly palette, appropriate point size, regression lines per species, minimal theme.
+
+```{r}
+good_plot <- penguins_clean %>%
+  ggplot(aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point(size = 2.5, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+  scale_color_manual(
+    values = c("Adelie" = "#FF6B35", "Chinstrap" = "#004E89", "Gentoo" = "#009639"),
+    name = "Species"
+  ) +
+  labs(
+    title = "Relationship Between Flipper Length and Body Mass in Palmer Penguins",
+    subtitle = "Larger penguins tend to have longer flippers across all species",
+    x = "Flipper Length (mm)",
+    y = "Body Mass (g)",
+    caption = "Data source: Palmer Penguins dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0),
+    plot.subtitle = element_text(size = 11, color = "gray30", hjust = 0),
+    axis.title = element_text(size = 11, face = "bold"),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11, face = "bold"),
+    legend.text = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50")
+  )
+
+print(good_plot)
+```
+
+## The Bad Plot
+
+A deliberately poor plot demonstrating common mistakes: misleading title, clashing colors (not colorblind-friendly), angled axis labels, arbitrary axis limits that cut data, garish background colors.
+
+```{r}
+bad_plot <- penguins_clean %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm, color = sex)) +
+  geom_point(size = 8, alpha = 1) +
+  scale_color_manual(
+    values = c("female" = "red", "male" = "green"),
+    name = "Gender of the Penguin Bird"
+  ) +
+  labs(
+    title = "The best graph in the world",
+    x = "The length of a panguin bill in millimeters unit",
+    y = "mm bill depth of penguin"
+  ) +
+  xlim(30, 65) +
+  ylim(12, 25) +
+  theme(
+    plot.title = element_text(size = 20, face = "bold", color = "purple"),
+    axis.title.x = element_text(size = 14, angle = 45, color = "blue"),
+    axis.title.y = element_text(size = 14, angle = 45, color = "orange"),
+    axis.text.x = element_text(angle = 90, size = 6),
+    axis.text.y = element_text(angle = 45, size = 6),
+    legend.position = "top",
+    legend.title = element_text(size = 8),
+    panel.background = element_rect(fill = "yellow"),
+    plot.background = element_rect(fill = "lightblue"),
+    panel.grid.major = element_line(color = "darkgreen", size = 2),
+    panel.grid.minor = element_line(color = "pink", size = 1)
+  )
+
+print(bad_plot)
+```

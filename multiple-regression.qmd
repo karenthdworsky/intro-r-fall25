@@ -1,0 +1,120 @@
+---
+title: "Multiple Linear Regression: USGS Gage Streamflow"
+author: "Karen Dworsky"
+date: "2025-10-01"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+
+data_files <- list.files('usgs_gages/usgs_gages', full.names = TRUE, pattern = "*.csv")
+usgs_data <- map_dfr(data_files, read_csv)
+```
+
+## 1. Exploratory: Predictors vs. Annual Streamflow
+
+```{r}
+usgs_long <- usgs_data %>%
+  select(annual_streamflow_mm, mean_baseflow, ws_area_sqkm, site_elevation,
+         median_ws_elevation, mean_annual_precip, mean_winter_temp,
+         mean_aridity_index, soil_sand_content, mean_soil_organic_matter,
+         mean_soil_permeability, percent_urban, percent_forested,
+         percent_wetland, percent_s_facing) %>%
+  pivot_longer(cols = -annual_streamflow_mm)
+
+ggplot(data = usgs_long, aes(x = value, y = annual_streamflow_mm)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  facet_wrap(~name, scales = "free_x") +
+  labs(
+    x = "Predictor Variable Value",
+    y = "Annual Streamflow (mm)",
+    title = "Relationship between Predictors and Annual Streamflow"
+  ) +
+  theme_bw()
+```
+
+## 2. Multiple Linear Regression Model
+
+```{r}
+streamflow_model <- lm(annual_streamflow_mm ~ mean_annual_precip +
+                                               ws_area_sqkm +
+                                               mean_baseflow +
+                                               percent_forested +
+                                               mean_aridity_index +
+                                               soil_sand_content,
+                       data = usgs_data)
+
+summary(streamflow_model)
+```
+
+## 3. Assumption Diagnostics
+
+```{r}
+plot(streamflow_model, which = 1)
+plot(streamflow_model, which = 2)
+
+usgs_data %>%
+  select(mean_annual_precip, ws_area_sqkm, mean_baseflow,
+         percent_forested, mean_aridity_index, soil_sand_content) %>%
+  cor()
+```
+
+## 4. Prediction
+
+```{r}
+new_streamflow_data <- tibble(
+  mean_annual_precip = c(1972, 994),
+  ws_area_sqkm = c(1500, 2),
+  mean_baseflow = c(67, 20),
+  percent_forested = c(100, 30),
+  mean_aridity_index = c(1.1, 1.3),
+  soil_sand_content = c(40, 50)
+)
+
+predict(streamflow_model, newdata = new_streamflow_data)
+```
+
+## 5. Model Improvements
+
+```{r}
+streamflow_model_log <- lm(log(annual_streamflow_mm) ~ mean_annual_precip +
+                                                        ws_area_sqkm +
+                                                        mean_baseflow,
+                           data = usgs_data)
+
+streamflow_model_sqrt <- lm(sqrt(annual_streamflow_mm) ~ mean_annual_precip +
+                                                          ws_area_sqkm,
+                            data = usgs_data)
+
+streamflow_model <- lm(annual_streamflow_mm ~ log(mean_annual_precip) +
+                                               log(ws_area_sqkm) +
+                                               mean_baseflow,
+                       data = usgs_data)
+
+streamflow_model_reduced <- lm(annual_streamflow_mm ~ mean_annual_precip +
+                                                       ws_area_sqkm,
+                               data = usgs_data)
+
+plot(streamflow_model, which = 4)
+
+cooksd <- cooks.distance(streamflow_model)
+usgs_filtered <- usgs_data %>% filter(cooksd < 0.5)
+
+streamflow_model_filtered <- lm(annual_streamflow_mm ~ mean_annual_precip +
+                                                        ws_area_sqkm,
+                                data = usgs_filtered)
+
+streamflow_model_interact <- lm(annual_streamflow_mm ~ mean_annual_precip *
+                                                        mean_aridity_index +
+                                                        ws_area_sqkm,
+                                data = usgs_data)
+
+plot(streamflow_model_log, which = 1)
+plot(streamflow_model_log, which = 2)
+```

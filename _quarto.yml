@@ -1,0 +1,29 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Introduction to R — Fall 2025"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: data-wrangling.qmd
+        text: Data Wrangling
+      - href: data-visualization.qmd
+        text: Visualization
+      - href: hypothesis-testing-ttest.qmd
+        text: T-Test
+      - href: hypothesis-testing-anova.qmd
+        text: ANOVA
+      - href: linear-regression.qmd
+        text: Linear Regression
+      - href: multiple-regression.qmd
+        text: Multiple Regression
+      - href: statistical-power.qmd
+        text: Statistical Power
+
+format:
+  html:
+    theme: cosmo
+    toc: true

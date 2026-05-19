@@ -1,0 +1,16 @@
+---
+title: "Introduction to R — Fall 2025"
+author: "Karen Dworsky"
+---
+
+Course assignments from ESS Introduction to R, Fall 2025 at Colorado State University. Topics cover data wrangling, visualization, and statistical inference in R using tidyverse, ggplot2, and related packages.
+
+| Topic | Description |
+|-------|-------------|
+| [Data Wrangling](data-wrangling.qmd) | Palmer penguins: dplyr select, filter, group_by, summarise, mutate |
+| [Data Visualization](data-visualization.qmd) | Principles of good vs. bad ggplot design |
+| [T-Test](hypothesis-testing-ttest.qmd) | Salamander length: independent samples t-test |
+| [ANOVA](hypothesis-testing-anova.qmd) | Salamander length by channel type: one-way ANOVA & Tukey HSD |
+| [Linear Regression](linear-regression.qmd) | Lake ice duration vs. winter temperature: correlation and simple regression |
+| [Multiple Regression](multiple-regression.qmd) | USGS gage streamflow: multiple linear regression |
+| [Statistical Power](statistical-power.qmd) | Cutthroat trout: p-value simulation across sample sizes |

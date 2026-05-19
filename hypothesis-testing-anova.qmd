@@ -1,0 +1,89 @@
+---
+title: "Hypothesis Testing: One-Way ANOVA"
+author: "Karen Dworsky"
+date: "2025-09-22"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(rstatix)
+
+data("and_vertebrates")
+```
+
+## Data Preparation
+
+Filter for Coastal giant salamander across three channel unit types (C = cascade, P = pool, SC = side channel).
+
+```{r}
+salamander_data <- and_vertebrates %>%
+  filter(species == "Coastal giant salamander",
+         unittype %in% c("C", "P", "SC")) %>%
+  select(unittype, length_1_mm) %>%
+  filter(!is.na(length_1_mm), !is.na(unittype)) %>%
+  mutate(unittype = as.factor(unittype))
+```
+
+## Assumption Checks
+
+```{r}
+salamander_data %>%
+  group_by(unittype) %>%
+  get_summary_stats(length_1_mm, type = "mean_sd")
+
+normality_check <- salamander_data %>%
+  group_by(unittype) %>%
+  summarise(
+    n = n(),
+    shapiro_p = if (n >= 3 & n <= 5000) shapiro.test(length_1_mm)$p.value else NA,
+    .groups = 'drop'
+  )
+
+normality_check
+
+salamander_data %>%
+  levene_test(length_1_mm ~ unittype)
+```
+
+## ANOVA and Post-Hoc Test
+
+```{r}
+anova_result <- salamander_data %>%
+  anova_test(length_1_mm ~ unittype)
+
+anova_result
+
+if (anova_result$p < 0.05) {
+  posthoc_result <- salamander_data %>%
+    tukey_hsd(length_1_mm ~ unittype)
+  posthoc_result
+}
+
+eta_squared <- salamander_data %>%
+  anova_test(length_1_mm ~ unittype)
+
+eta_squared$ges
+```
+
+## Visualization
+
+```{r}
+salamander_data %>%
+  ggplot(aes(x = unittype, y = length_1_mm, fill = unittype)) +
+  geom_boxplot(alpha = 0.7) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3,
+               fill = "white", color = "black") +
+  labs(
+    title = "Salamander Length by Channel Type",
+    x = "Channel Type",
+    y = "Snout-vent Length (mm)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```

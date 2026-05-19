@@ -1,0 +1,145 @@
+---
+title: "Hypothesis Testing: Independent Samples T-Test"
+author: "Karen Dworsky"
+date: "2025-09-22"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(rstatix)
+
+data("and_vertebrates")
+```
+
+## Data Preparation
+
+Filter for Coastal giant salamander and remove missing length measurements.
+
+```{r}
+salamander_data <- and_vertebrates %>%
+  filter(species == "Coastal giant salamander") %>%
+  select(section, length_1_mm) %>%
+  filter(!is.na(length_1_mm), !is.na(section)) %>%
+  filter(length_1_mm > 0)
+
+glimpse(salamander_data)
+
+salamander_summary <- salamander_data %>%
+  group_by(section) %>%
+  summarise(
+    n = n(),
+    mean_length = mean(length_1_mm),
+    sd_length = sd(length_1_mm),
+    median_length = median(length_1_mm),
+    .groups = 'drop'
+  )
+
+print(salamander_summary)
+```
+
+## Assumption Checks
+
+### A. Normality
+
+Shapiro-Wilk test: if p > 0.05 the data are approximately normally distributed. Q-Q plots provide a visual check.
+
+```{r}
+sample_sizes <- salamander_data %>% count(section)
+print(sample_sizes)
+
+tryCatch({
+  normality_tests <- salamander_data %>%
+    group_by(section) %>%
+    shapiro_test(length_1_mm)
+  print(normality_tests)
+}, error = function(e) {
+  for (forest_type in unique(salamander_data$section)) {
+    group_data <- salamander_data %>% filter(section == forest_type)
+    if (nrow(group_data) >= 3 & nrow(group_data) <= 5000) {
+      test_result <- shapiro.test(group_data$length_1_mm)
+      cat(sprintf("Forest type: %s, n = %d, W = %.4f, p-value = %.4f\n",
+                  forest_type, nrow(group_data), test_result$statistic, test_result$p.value))
+    }
+  }
+})
+
+qq_plot <- salamander_data %>%
+  ggplot(aes(sample = length_1_mm)) +
+  geom_qq() +
+  geom_qq_line() +
+  facet_wrap(~section) +
+  labs(title = "Q-Q Plots for Normality Check",
+       subtitle = "Coastal Giant Salamander Length by Forest Type") +
+  theme_minimal()
+
+print(qq_plot)
+```
+
+### B. Equal Variances
+
+Levene's test for homoscedasticity.
+
+```{r}
+variance_test <- salamander_data %>%
+  levene_test(length_1_mm ~ section)
+
+print(variance_test)
+
+boxplot_check <- salamander_data %>%
+  ggplot(aes(x = section, y = length_1_mm)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Boxplot: Salamander Length by Forest Type",
+       subtitle = "Visual check for equal variances and outliers",
+       x = "Forest Type (Section)",
+       y = "Snout-vent Length (mm)") +
+  theme_minimal()
+
+print(boxplot_check)
+```
+
+## T-Test and Effect Size
+
+```{r}
+ttest_result <- salamander_data %>%
+  t_test(length_1_mm ~ section, var.equal = TRUE)
+
+print(ttest_result)
+
+effect_size <- salamander_data %>%
+  cohens_d(length_1_mm ~ section)
+
+print(effect_size)
+```
+
+## Final Plot
+
+```{r}
+clean_boxplot <- salamander_data %>%
+  ggplot(aes(x = section, y = length_1_mm, fill = section)) +
+  geom_boxplot(alpha = 0.8, outlier.size = 1.5, outlier.alpha = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 4,
+               fill = "white", color = "black", stroke = 1) +
+  labs(
+    title = "Snout-vent Length of Coastal Giant Salamanders",
+    subtitle = "Comparison between forest types",
+    x = "Forest Type",
+    y = "Snout-vent Length (mm)"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size = 10)
+  ) +
+  scale_fill_brewer(palette = "Set2")
+
+print(clean_boxplot)
+```

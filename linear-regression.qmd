@@ -1,0 +1,106 @@
+---
+title: "Linear Regression: Lake Ice Duration and Winter Temperature"
+author: "Karen Dworsky"
+date: "2025-09-23"
+format: html
+execute:
+  cache: true
+---
+
+## Setup
+
+```{r}
+library(tidyverse)
+library(lterdatasampler)
+library(rstatix)
+library(lubridate)
+
+data("ntl_airtemp")
+data("ntl_icecover")
+```
+
+## Data Preparation
+
+Calculate mean ice duration by water year and mean winter air temperature (Nov–Apr) by water year.
+
+```{r}
+avg_icecover <- ntl_icecover %>%
+  group_by(wyear = year + 1) %>%
+  summarize(mean_duration = mean(ice_duration, na.rm = TRUE))
+
+ntl_airtemp_wyear <- ntl_airtemp %>%
+  mutate(wyear = if_else(month(sampledate) < 10, year, year + 1))
+
+ntl_winter_airtemp <- ntl_airtemp_wyear %>%
+  filter(lubridate::month(sampledate) %in% c(11, 12, 1:4)) %>%
+  group_by(wyear) %>%
+  summarize(mean_air_temp = mean(ave_air_temp_adjusted))
+```
+
+## 1. Join datasets
+
+```{r}
+icecover_temp <- avg_icecover %>%
+  inner_join(ntl_winter_airtemp, by = "wyear")
+```
+
+## 2. Exploratory plot
+
+```{r}
+ggplot(data = icecover_temp, aes(x = mean_air_temp, y = mean_duration)) +
+  geom_point() +
+  labs(
+    x = "Mean Winter Air Temperature (°C)",
+    y = "Mean Ice Duration (days)",
+    title = "Relationship between Winter Air Temperature and Ice Duration"
+  ) +
+  theme_bw()
+```
+
+## 3. Correlation test
+
+```{r}
+shapiro.test(icecover_temp$mean_air_temp)
+shapiro.test(icecover_temp$mean_duration)
+
+cor_test(icecover_temp,
+         vars = c(mean_air_temp, mean_duration),
+         alternative = "two.sided",
+         method = "pearson")
+```
+
+## 4. Simple linear regression
+
+```{r}
+ice_temp_model <- lm(mean_duration ~ mean_air_temp, data = icecover_temp)
+summary(ice_temp_model)
+
+new_temps <- tibble(mean_air_temp = c(-2, 0, 2))
+predict(ice_temp_model, newdata = new_temps)
+```
+
+## 5. Regression plot
+
+```{r}
+ggplot(data = icecover_temp, aes(x = mean_air_temp, y = mean_duration)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Mean Winter Air Temperature (°C)",
+    y = "Mean Ice Duration (days)",
+    title = "Relationship between Winter Air Temperature and Ice Duration"
+  ) +
+  theme_bw()
+```
+
+## 6. Model coefficients
+
+```{r}
+summary(ice_temp_model)
+coefficients(ice_temp_model)
+
+intercept <- coef(ice_temp_model)[1]
+slope <- coef(ice_temp_model)[2]
+
+sigma(ice_temp_model)
+```
